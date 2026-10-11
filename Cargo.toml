@@ -1,6 +1,10 @@
 [package]
 name = "dextra"
+<<<<<<< HEAD
 authors = ["cuber"]
+=======
+authors = ["Cuber"]
+>>>>>>> 32ed0c33abf4008b8b6fa7e766c4dd9c6e6bad48
 version = "0.1.0"
 repository = "https://github.com/cosmic4445/DEXTRA/tree/main"
 edition = "2021"
