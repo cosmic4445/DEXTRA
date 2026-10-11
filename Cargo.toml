@@ -1,19 +1,16 @@
 [package]
 name = "dextra"
-<<<<<<< HEAD
-authors = ["cuber"]
-=======
-authors = ["Cuber"]
->>>>>>> 32ed0c33abf4008b8b6fa7e766c4dd9c6e6bad48
 version = "0.1.0"
-repository = "https://github.com/cosmic4445/DEXTRA/tree/main"
 edition = "2021"
 
 [dependencies]
 iced = { version = "0.13", features = ["tokio", "image", "svg"] }
 reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
-tokio = { version = "1", features = ["rt"] }
+serde_json = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+tokio = { version = "1", features = ["rt", "time"] }
+tray-icon = "0.19"
 image = "0.25"
 dirs = "5"
 opener = "0.7"
@@ -28,9 +25,4 @@ windows = { version = "0.58", features = [
 
 [profile.release]
 opt-level = 3
-lto = "thin"
-
-# The profile that 'dist' will build with
-[profile.dist]
-inherits = "release"
 lto = "thin"

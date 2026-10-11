@@ -1,24 +1,43 @@
-**DEXTRA**
+# Dextra
 
-Dextra is a widget app for windows. It has multiple different types of widgets like the weather, discord, music, etc.
+A widget hub for Windows, written in Rust with iced.
 
-**HOW TO RUN (FOR PEOPLE WHO WANNA MESS AROUND**
+## Run
 
-To get the full code from github (not up yet), you must click the green ``< > Code`` button next to the add file button. Then click Download ZIP at the bottom of the box and voilà you have yourself code.
+    cargo run --release
 
+The first build takes a few minutes. To rebuild, quit Dextra first (tray icon, then Quit), since Windows will not overwrite a running program.
 
-**HOW TO DOWNLOAD**
+## The window
 
-for noobs like you :index_pointing_at_the_viewer: 
+Tabs along the top group the widgets:
 
-To download the EXE from the github, first goto the page, on the right side there is a "Releases" click on the text then scroll down till you see "DEXTRA V---". Click on it and you will get the installer download.
+- **Home**: everything at a glance.
+- **Time**: clock and weather.
+- **Utility**: files and photos.
+- **Media**: now playing.
+- **Social**: Discord and Snapchat shortcuts.
+- **Settings**: pick desktop widgets, choose the layer, set the weather city, start with Windows.
 
-Notes for people who wanna mess around with the code
+## Desktop widgets
 
-1. Please dont feed this to AI, this is my hard work and sweat poured into this I would hate for some vibe coder to make this into a abomination of a app and call it theirs
+Press **Pin to desktop** on any card and the widget appears on your desktop as its own window. Drag it anywhere. Right-click it to remove it. Positions are saved to `%APPDATA%\Dextra\layout.json` and restored on the next start.
 
-2. Dont call this malware or a virus, just look at the damn code.
+## Background
 
-3. I am always watching, so dont even try to reupload this and call it your own
+Closing the window hides it and your widgets keep running. Dextra stays in the system tray: click the tray icon (or launch Dextra again) to bring the window back, right-click it for Open and Quit. If the tray icon cannot be created, the close button minimizes the window instead.
 
-4. Dont come to me and ask how to fix a bug, do it yourself.
+If Dextra ever stops unexpectedly, the reason is saved to `%APPDATA%\Dextra\crash.log`.
+
+Release builds open no console window.
+
+Turn on **Start with Windows** in Settings and Dextra starts hidden at login with your widgets in place. It registers the program's current location, so switch it off and on again if you move the file.
+
+## Widgets
+
+- **Clock**: time and date.
+- **Weather**: Open-Meteo, refreshed every 15 minutes. Set the city in Settings (plain city name, for example `Toronto`).
+- **Now playing**: whatever is playing through Windows media controls, with play/pause, skip and album art.
+- **Photos**: the newest images from your Pictures folder.
+- **Files**: browse from your home folder and open files.
+- **Discord** and **Snapchat**: launcher shortcuts.

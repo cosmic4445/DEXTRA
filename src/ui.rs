@@ -2,11 +2,14 @@ use iced::widget::image as picture;
 use iced::widget::svg::Svg;
 use iced::widget::text::Wrapping;
 use iced::widget::{
-    button, column, container, horizontal_space, mouse_area, progress_bar, row, text,
+    button, column, container, horizontal_space, mouse_area, progress_bar, row, text, text_input,
     vertical_space, Row, Space,
 };
-use iced::{Alignment, Background, Border, Color, ContentFit, Element, Length, Padding, Theme};
+use iced::{
+    window, Alignment, Background, Border, Color, ContentFit, Element, Length, Padding, Theme,
+};
 
+use crate::widgets::Widget;
 use crate::{colors, icons, media, photos, Message, Tab};
 
 fn block(width: f32, height: f32, color: Color) -> Element<'static, Message> {
@@ -39,7 +42,6 @@ pub fn logo(scale: f32, color: Color) -> Element<'static, Message> {
 pub fn tile<'a>(
     title: &'static str,
     meta: impl Into<String>,
-    height: Length,
     body: Element<'a, Message>,
 ) -> Element<'a, Message> {
     let label = row![
@@ -51,19 +53,50 @@ pub fn tile<'a>(
     container(column![label, body].spacing(12).height(Length::Fill))
         .padding(20)
         .width(Length::Fill)
-        .height(height)
+        .height(Length::Fill)
         .style(tile_style)
         .into()
 }
 
-pub fn launcher<'a>(
-    title: &'static str,
+pub fn card<'a>(
+    widget: Widget,
+    meta: impl Into<String>,
+    body: Element<'a, Message>,
+    height: Length,
+    pinned: bool,
+) -> Element<'a, Message> {
+    let (label, style): (&'static str, fn(&Theme, button::Status) -> button::Style) = if pinned {
+        ("Unpin", primary)
+    } else {
+        ("Pin to desktop", outline)
+    };
+
+    let header = row![
+        text(widget.label()).size(13).color(colors::muted()),
+        horizontal_space(),
+        text(meta.into()).size(13).color(colors::muted()),
+        button(text(label).size(12))
+            .padding([5, 12])
+            .style(style)
+            .on_press(Message::Toggle(widget)),
+    ]
+    .spacing(12)
+    .align_y(Alignment::Center);
+
+    container(column![header, body].spacing(12).height(Length::Fill))
+        .padding(20)
+        .width(Length::Fill)
+        .height(height)
+        .style(card_style)
+        .into()
+}
+
+pub fn launcher(
     note: &'static str,
     label: &'static str,
     target: &'static str,
-    height: Length,
-) -> Element<'a, Message> {
-    let body = column![
+) -> Element<'static, Message> {
+    column![
         text(note).size(15).color(colors::muted()),
         vertical_space(),
         button(text(label).size(14))
@@ -71,9 +104,8 @@ pub fn launcher<'a>(
             .style(primary)
             .on_press(Message::Launch(target)),
     ]
-    .height(Length::Fill);
-
-    tile(title, "Launcher", height, body.into())
+    .height(Length::Fill)
+    .into()
 }
 
 pub fn entry<'a>(name: &'a str, is_dir: bool, message: Message) -> Element<'a, Message> {
@@ -99,7 +131,7 @@ pub fn photo(item: &photos::Photo) -> Element<'_, Message> {
         picture(item.handle.clone())
             .width(Length::Fill)
             .height(Length::Fill)
-            .content_fit(ContentFit::Cover),
+            .content_fit(ContentFit::Contain),
     )
     .padding(0)
     .width(Length::Fill)
@@ -129,7 +161,7 @@ pub fn icon_button(icon: Svg<'static>, message: Message) -> Element<'static, Mes
         .into()
 }
 
-pub fn title_bar(active: Tab) -> Element<'static, Message> {
+pub fn title_bar(id: window::Id, active: Tab) -> Element<'static, Message> {
     let tabs = Tab::ALL.iter().fold(Row::new().spacing(4), |tabs, &tab| {
         tabs.push(
             button(text(tab.label()).size(13))
@@ -140,9 +172,9 @@ pub fn title_bar(active: Tab) -> Element<'static, Message> {
     });
 
     let controls = row![
-        control("–", Message::Minimize, false),
-        control("□", Message::ToggleMaximize, false),
-        control("×", Message::Close, true),
+        control("–", Message::Minimize(id), false),
+        control("□", Message::ToggleMaximize(id), false),
+        control("×", Message::CloseHub(id), true),
     ];
 
     let bar = row![
@@ -163,7 +195,63 @@ pub fn title_bar(active: Tab) -> Element<'static, Message> {
         left: 24.0,
     });
 
-    mouse_area(bar).on_press(Message::Drag).into()
+    mouse_area(bar).on_press(Message::Drag(id)).into()
+}
+
+pub fn catalog_row(widget: Widget, active: bool) -> Element<'static, Message> {
+    let style: fn(&Theme, button::Status) -> button::Style =
+        if active { outline } else { primary };
+    let label = if active { "Remove" } else { "Add" };
+
+    container(
+        row![
+            column![
+                text(widget.label()).size(16),
+                text(widget.blurb()).size(13).color(colors::muted()),
+            ]
+            .spacing(4),
+            horizontal_space(),
+            button(text(label).size(14))
+                .padding([10, 18])
+                .style(style)
+                .on_press(Message::Toggle(widget)),
+        ]
+        .align_y(Alignment::Center),
+    )
+    .padding(16)
+    .width(Length::Fill)
+    .style(panel_style)
+    .into()
+}
+
+pub fn segment(label: &'static str, active: bool, message: Message) -> Element<'static, Message> {
+    button(text(label).size(13))
+        .padding([8, 16])
+        .style(tab_style(active))
+        .on_press(message)
+        .into()
+}
+
+pub fn outline_button(label: &'static str, message: Message) -> Element<'static, Message> {
+    button(text(label).size(14))
+        .padding([10, 18])
+        .style(outline)
+        .on_press(message)
+        .into()
+}
+
+pub fn input<'a>(
+    value: &'a str,
+    on_input: impl Fn(String) -> Message + 'a,
+    on_submit: Message,
+) -> Element<'a, Message> {
+    text_input("City", value)
+        .on_input(on_input)
+        .on_submit(on_submit)
+        .padding(10)
+        .width(200)
+        .style(input_style)
+        .into()
 }
 
 fn control(symbol: &'static str, message: Message, close: bool) -> Element<'static, Message> {
@@ -204,7 +292,31 @@ pub fn tile_style(_: &Theme) -> container::Style {
         border: Border {
             color: colors::border(),
             width: 1.0,
+            radius: 0.0.into(),
+        },
+        ..container::Style::default()
+    }
+}
+
+pub fn card_style(_: &Theme) -> container::Style {
+    container::Style {
+        background: Some(Background::Color(colors::surface())),
+        border: Border {
+            color: colors::border(),
+            width: 1.0,
             radius: 20.0.into(),
+        },
+        ..container::Style::default()
+    }
+}
+
+pub fn panel_style(_: &Theme) -> container::Style {
+    container::Style {
+        background: Some(Background::Color(colors::surface())),
+        border: Border {
+            color: colors::border(),
+            width: 1.0,
+            radius: 16.0.into(),
         },
         ..container::Style::default()
     }
@@ -232,6 +344,25 @@ pub fn progress(_: &Theme) -> progress_bar::Style {
     }
 }
 
+fn input_style(_: &Theme, status: text_input::Status) -> text_input::Style {
+    let border = match status {
+        text_input::Status::Focused => colors::text(),
+        _ => colors::border(),
+    };
+    text_input::Style {
+        background: Background::Color(colors::bg()),
+        border: Border {
+            color: border,
+            width: 1.0,
+            radius: 10.0.into(),
+        },
+        icon: colors::muted(),
+        placeholder: colors::track(),
+        value: colors::text(),
+        selection: colors::track(),
+    }
+}
+
 fn tab_style(active: bool) -> impl Fn(&Theme, button::Status) -> button::Style {
     move |_, _| {
         if active {
@@ -245,6 +376,18 @@ fn tab_style(active: bool) -> impl Fn(&Theme, button::Status) -> button::Style {
 fn primary(_: &Theme, status: button::Status) -> button::Style {
     let shade = if hovered(status) { 0.9 } else { 1.0 };
     look(Some(Color::from_rgb(shade, shade, shade)), colors::bg(), 999.0)
+}
+
+fn outline(_: &Theme, status: button::Status) -> button::Style {
+    let background = hovered(status).then(colors::surface_hover);
+    button::Style {
+        border: Border {
+            color: colors::track(),
+            width: 1.0,
+            radius: 999.0.into(),
+        },
+        ..look(background, colors::text(), 999.0)
+    }
 }
 
 fn circle(_: &Theme, status: button::Status) -> button::Style {

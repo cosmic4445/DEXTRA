@@ -22,7 +22,10 @@ fn is_image(path: &Path) -> bool {
 }
 
 fn thumbnail(path: PathBuf) -> Option<Photo> {
-    let picture = ::image::open(&path).ok()?.thumbnail(480, 480).to_rgba8();
+    let picture = ::image::open(&path)
+        .ok()?
+        .resize_to_fill(400, 300, ::image::imageops::FilterType::Triangle)
+        .to_rgba8();
     let (width, height) = picture.dimensions();
     Some(Photo {
         handle: Handle::from_rgba(width, height, picture.into_raw()),

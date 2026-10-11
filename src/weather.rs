@@ -1,7 +1,5 @@
 use serde::Deserialize;
 
-const CITY: &str = "Toronto";
-
 #[derive(Debug, Clone)]
 pub struct Report {
     pub city: String,
@@ -55,12 +53,17 @@ fn describe(code: u8) -> &'static str {
     }
 }
 
-async fn request() -> Result<Report, Box<dyn std::error::Error>> {
+async fn request(city: String) -> Result<Report, Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
 
     let geocoding: Geocoding = client
         .get("https://geocoding-api.open-meteo.com/v1/search")
-        .query(&[("name", CITY), ("count", "1")])
+        .query(&[
+            ("name", city.as_str()),
+            ("count", "1"),
+            ("language", "en"),
+            ("format", "json"),
+        ])
         .send()
         .await?
         .json()
@@ -69,7 +72,7 @@ async fn request() -> Result<Report, Box<dyn std::error::Error>> {
     let place = geocoding
         .results
         .and_then(|results| results.into_iter().next())
-        .ok_or("city not found")?;
+        .ok_or_else(|| format!("No city named \"{city}\" found"))?;
 
     let forecast: Forecast = client
         .get("https://api.open-meteo.com/v1/forecast")
@@ -95,6 +98,6 @@ async fn request() -> Result<Report, Box<dyn std::error::Error>> {
     })
 }
 
-pub async fn fetch() -> Result<Report, String> {
-    request().await.map_err(|error| error.to_string())
+pub async fn fetch(city: String) -> Result<Report, String> {
+    request(city).await.map_err(|error| error.to_string())
 }
