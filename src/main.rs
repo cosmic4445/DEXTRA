@@ -199,6 +199,30 @@ fn signals() -> impl iced::futures::Stream<Item = Message> {
     })
 }
 
+fn media_stream() -> impl iced::futures::Stream<Item = Message> {
+    iced::stream::channel(4, |mut output| async move {
+        let mut known: Option<String> = None;
+        let mut last: Option<(String, bool, u32)> = None;
+
+        loop {
+            let snapshot = media::read(known.clone()).await;
+            known = snapshot.as_ref().map(|track| track.title.clone());
+
+            let marker = snapshot
+                .as_ref()
+                .map(|track| (track.title.clone(), track.playing, track.position as u32));
+            let has_art = snapshot.as_ref().is_some_and(|track| track.art.is_some());
+
+            if marker != last || has_art {
+                last = marker;
+                let _ = output.send(Message::MediaUpdated(snapshot)).await;
+            }
+
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+    })
+}
+
 impl Dextra {
     fn new(hidden: bool) -> (Self, Task<Message>) {
         let saved = layout::load();
@@ -517,16 +541,23 @@ impl Dextra {
     fn subscription(&self) -> Subscription<Message> {
         let mut active = vec![
             window::close_events().map(Message::WindowClosed),
-            window::events().map(|(id, event)| Message::WindowEvent(id, event)),
+            iced::event::listen_with(|event, _, id| match event {
+                iced::Event::Window(
+                    event @ (window::Event::Moved(_)
+                    | window::Event::Opened { .. }
+                    | window::Event::CloseRequested),
+                ) => Some(Message::WindowEvent(id, event)),
+                _ => None,
+            }),
             Subscription::run(signals),
             time::every(Duration::from_secs(900)).map(|_| Message::RefreshWeather),
         ];
 
         if self.needs(Widget::Media) {
-            active.push(time::every(Duration::from_secs(1)).map(|_| Message::MediaTick));
+            active.push(Subscription::run(media_stream));
         }
         if self.needs(Widget::Clock) {
-            active.push(time::every(Duration::from_secs(1)).map(|_| Message::ClockTick));
+            active.push(time::every(Duration::from_secs(5)).map(|_| Message::ClockTick));
         }
         if self.dirty {
             active.push(time::every(Duration::from_secs(2)).map(|_| Message::SaveTick));
@@ -908,6 +939,7 @@ fn record_panics() {
 }
 
 fn main() -> iced::Result {
+    std::env::set_var("ICED_PRESENT_MODE", "no_vsync");
     record_panics();
 
     let hidden = std::env::args().any(|arg| arg == "--background");
